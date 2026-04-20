@@ -1,0 +1,54 @@
+{
+  "database": "FirebaseProject",
+  "collection": "users",
+  "documents": [
+    {
+      "uid": "UID_DO_USUARIO",
+      "email": "aluno@exemplo.com",
+      "passwordHash": "salt:hash",
+      "profile": {
+        "email": "aluno@exemplo.com",
+        "role": "user",
+        "createdAt": "2026-04-20T17:30:00.000Z"
+      },
+      "private": {
+        "lastLoginAt": "2026-04-20T17:30:00.000Z",
+        "welcomeMessage": "Conta user criada para demonstracao."
+      },
+      "adminAccess": null
+    },
+    {
+      "uid": "UID_DO_ADMIN",
+      "email": "admin@exemplo.com",
+      "passwordHash": "salt:hash",
+      "profile": {
+        "email": "admin@exemplo.com",
+        "role": "admin",
+        "createdAt": "2026-04-20T17:30:00.000Z"
+      },
+      "private": {
+        "lastLoginAt": "2026-04-20T17:30:00.000Z",
+        "welcomeMessage": "Conta admin criada para demonstracao."
+      },
+      "adminAccess": {
+        "grantedAt": "2026-04-20T17:30:00.000Z",
+        "note": "Admin autorizado na criacao da conta"
+      }
+    }
+  ],
+  "derivedAdminData": {
+    "dashboard": {
+      "title": "Painel exclusivo do administrador",
+      "lastReviewAt": "2026-04-20T17:30:00.000Z",
+      "totalUsers": 2,
+      "totalAdmins": 1
+    },
+    "audit": {
+      "UID_DO_ADMIN": {
+        "email": "admin@exemplo.com",
+        "grantedAt": "2026-04-20T17:30:00.000Z",
+        "note": "Admin autorizado na criacao da conta"
+      }
+    }
+  }
+}

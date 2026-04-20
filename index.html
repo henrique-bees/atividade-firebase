@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MongoDB Roles Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">Atividade MongoDB</p>
+      <h1>Controle de acesso por cargo com MongoDB Atlas</h1>
+      <p class="hero-copy">
+        Esta demo mostra dois cargos, <strong>admin</strong> e <strong>user</strong>,
+        acessando partes diferentes da collection <strong>users</strong> por meio de uma API Node.js.
+      </p>
+      <div class="legend">
+        <span class="badge badge-allowed">Acesso liberado</span>
+        <span class="badge badge-denied">Acesso bloqueado</span>
+      </div>
+    </section>
+
+    <section class="panel auth-panel">
+      <div class="panel-header">
+        <div>
+          <p class="panel-kicker">1. Autenticacao</p>
+          <h2>Entrar ou criar conta</h2>
+        </div>
+        <span id="session-state" class="pill neutral">Desconectado</span>
+      </div>
+
+      <form id="auth-form" class="auth-form">
+        <label>
+          <span>E-mail</span>
+          <input id="email" type="email" placeholder="voce@exemplo.com" required>
+        </label>
+
+        <label>
+          <span>Senha</span>
+          <input id="password" type="password" minlength="6" placeholder="Minimo 6 caracteres" required>
+        </label>
+
+        <label>
+          <span>Cargo no cadastro</span>
+          <select id="role">
+            <option value="user">user</option>
+            <option value="admin">admin</option>
+          </select>
+        </label>
+
+        <div class="actions">
+          <button id="signup-btn" type="button">Criar conta</button>
+          <button id="login-btn" type="button" class="secondary">Entrar</button>
+          <button id="logout-btn" type="button" class="ghost" disabled>Sair</button>
+        </div>
+      </form>
+
+      <div class="helper-grid">
+        <article class="helper-card">
+          <h3>Conta `user`</h3>
+          <p>Pode acessar apenas seus proprios dados.</p>
+        </article>
+        <article class="helper-card">
+          <h3>Conta `admin`</h3>
+          <p>Pode acessar todos os usuarios e tambem o painel agregado.</p>
+        </article>
+      </div>
+
+      <pre id="status-box" class="status-box">Configure o arquivo `.env`, rode `npm start` e inicie a demonstracao.</pre>
+    </section>
+
+    <section class="dashboard">
+      <article class="panel profile-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">2. Sessao atual</p>
+            <h2>Perfil carregado da collection</h2>
+          </div>
+        </div>
+        <div id="profile-summary" class="profile-summary empty">
+          Nenhum usuario autenticado.
+        </div>
+      </article>
+
+      <article class="panel access-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">3. Teste visual</p>
+            <h2>O que este cargo consegue ler?</h2>
+          </div>
+        </div>
+        <div class="cards" id="access-cards">
+          <article class="access-card neutral">
+            <h3>Minha area em `users`</h3>
+            <p>Faca login para testar.</p>
+          </article>
+          <article class="access-card neutral">
+            <h3>Painel derivado da collection</h3>
+            <p>Faca login para testar.</p>
+          </article>
+          <article class="access-card neutral">
+            <h3>Lista completa de `users`</h3>
+            <p>Faca login para testar.</p>
+          </article>
+        </div>
+      </article>
+
+      <article class="panel data-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">4. Dados retornados</p>
+            <h2>Resposta da API</h2>
+          </div>
+        </div>
+        <div class="json-grid">
+          <section>
+            <h3>`/api/users/me`</h3>
+            <pre id="user-json" class="json-box">Sem dados ainda.</pre>
+          </section>
+          <section>
+            <h3>`/api/admin-data`</h3>
+            <pre id="admin-json" class="json-box">Sem dados ainda.</pre>
+          </section>
+          <section>
+            <h3>`/api/users`</h3>
+            <pre id="users-json" class="json-box">Sem dados ainda.</pre>
+          </section>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
