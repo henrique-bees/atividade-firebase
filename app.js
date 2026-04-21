@@ -50,7 +50,7 @@ const elements = {
   liveEventsValue: document.getElementById("live-events-value"),
   liveUpdatedValue: document.getElementById("live-updated-value"),
   liveStateMeta: document.getElementById("live-state-meta"),
-  liveJson: document.getElementById("live-json"),
+  livePayload: document.getElementById("live-payload"),
   liveLog: document.getElementById("live-log")
 };
 
@@ -372,8 +372,7 @@ function renderSignedOut() {
 
   elements.presetSelfBtn.textContent = "Meu /users/{uid}";
   elements.livePathInput.value = "";
-  elements.liveJson.textContent = "Ative o modo realtime e escolha um caminho para iniciar o monitor.";
-  elements.liveJson.className = "json-box neutral";
+  renderLivePayloadState("neutral", "Sem listener ativo", "Ative o modo realtime e escolha um caminho para iniciar o monitor.");
   renderLivePlaceholder("Monitor parado", "Ative o modo realtime para comecar a escutar um caminho.", "neutral");
   updateLivePanel();
 }
@@ -464,8 +463,7 @@ function startLiveListener(path, forceRestart = false) {
   state.liveLastUpdate = null;
   state.liveEntries = [];
   elements.livePathInput.value = normalizedPath;
-  elements.liveJson.textContent = `Conectando listener em /${normalizedPath}...`;
-  elements.liveJson.className = "json-box neutral";
+  renderLivePayloadState("neutral", "Conectando listener", `Abrindo leitura em /${normalizedPath}.`);
   renderLivePlaceholder("Conectando", `Abrindo listener em /${normalizedPath}.`, "neutral");
   highlightActivePreset();
   updateLivePanel();
@@ -478,8 +476,7 @@ function startLiveListener(path, forceRestart = false) {
       state.liveStatus = snapshot.exists() ? "listening" : "empty";
 
       const payload = snapshot.exists() ? snapshot.val() : null;
-      elements.liveJson.textContent = JSON.stringify(payload, null, 2) || "null";
-      elements.liveJson.className = `json-box ${payload ? "allowed" : "neutral"}`;
+      renderLivePayloadData(payload, normalizedPath);
 
       addLiveEntry(
         payload ? "allowed" : "neutral",
@@ -492,8 +489,7 @@ function startLiveListener(path, forceRestart = false) {
     (error) => {
       state.liveStatus = "denied";
       state.liveLastUpdate = new Date();
-      elements.liveJson.textContent = `ERRO EM /${normalizedPath}\n${formatFirebaseError(error)}`;
-      elements.liveJson.className = "json-box denied";
+      renderLivePayloadState("denied", `Erro em /${normalizedPath}`, formatFirebaseError(error));
       addLiveEntry("denied", `Bloqueio em /${normalizedPath}`, formatFirebaseError(error));
       updateLivePanel();
     }
@@ -584,6 +580,89 @@ function renderLivePlaceholder(title, description, tone) {
 function clearLiveLog() {
   state.liveEntries = [];
   renderLivePlaceholder("Log limpo", "O historico do listener foi reiniciado.", "neutral");
+}
+
+function renderLivePayloadState(tone, title, description) {
+  elements.livePayload.className = `payload-view ${tone}`;
+  elements.livePayload.innerHTML = `
+    <article class="payload-empty">
+      <strong>${escapeHtml(title)}</strong>
+      <p>${escapeHtml(description)}</p>
+    </article>
+  `;
+}
+
+function renderLivePayloadData(payload, path) {
+  const tone = payload ? "allowed" : "neutral";
+  const summary = summarizePayloadShape(payload);
+  const content = payload === null
+    ? `
+      <article class="payload-empty">
+        <strong>No vazio</strong>
+        <p>O caminho /${escapeHtml(path)} existe, mas o valor atual e <code>null</code>.</p>
+      </article>
+    `
+    : renderPayloadNode("root", payload, 0, true);
+
+  elements.livePayload.className = `payload-view ${tone}`;
+  elements.livePayload.innerHTML = `
+    <div class="payload-header">
+      <div>
+        <p class="payload-path">/${escapeHtml(path)}</p>
+        <strong class="payload-title">${escapeHtml(summary.title)}</strong>
+      </div>
+      <span class="payload-badge">${escapeHtml(summary.badge)}</span>
+    </div>
+    <div class="payload-tree">
+      ${content}
+    </div>
+  `;
+}
+
+function renderPayloadNode(key, value, depth, isRoot = false) {
+  if (!isObjectLike(value)) {
+    return `
+      <article class="payload-node payload-node-leaf">
+        <div class="payload-row ${isRoot ? "payload-row-root" : ""}">
+          <span class="payload-key">${escapeHtml(key)}</span>
+          <div class="payload-value-group">
+            <span class="payload-value payload-value-${valueKind(value)}">${escapeHtml(formatPayloadValue(value))}</span>
+            <span class="payload-meta">${escapeHtml(valueKindLabel(value))}</span>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  const entries = Array.isArray(value)
+    ? value.map((item, index) => [String(index), item])
+    : Object.entries(value);
+
+  const children = entries.length
+    ? entries.map(([childKey, childValue]) => renderPayloadNode(childKey, childValue, depth + 1)).join("")
+    : `
+      <article class="payload-node payload-node-empty">
+        <div class="payload-row">
+          <span class="payload-key">vazio</span>
+          <span class="payload-meta">${Array.isArray(value) ? "array vazio" : "objeto vazio"}</span>
+        </div>
+      </article>
+    `;
+
+  return `
+    <article class="payload-node payload-node-branch depth-${Math.min(depth, 4)}">
+      <div class="payload-row ${isRoot ? "payload-row-root" : ""}">
+        <span class="payload-key">${escapeHtml(key)}</span>
+        <div class="payload-value-group">
+          <span class="payload-value payload-value-grouped">${Array.isArray(value) ? "Array" : "Objeto"}</span>
+          <span class="payload-meta">${entries.length} ${entries.length === 1 ? "item" : "itens"}</span>
+        </div>
+      </div>
+      <div class="payload-children">
+        ${children}
+      </div>
+    </article>
+  `;
 }
 
 function renderJson(target, result) {
@@ -725,6 +804,89 @@ function setStatus(message, tone) {
 
 function normalizePath(value) {
   return String(value || "").trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function isObjectLike(value) {
+  return typeof value === "object" && value !== null;
+}
+
+function valueKind(value) {
+  if (value === null) {
+    return "null";
+  }
+
+  if (Array.isArray(value)) {
+    return "array";
+  }
+
+  return typeof value;
+}
+
+function valueKindLabel(value) {
+  const kind = valueKind(value);
+
+  if (kind === "string") {
+    return "texto";
+  }
+
+  if (kind === "number") {
+    return "numero";
+  }
+
+  if (kind === "boolean") {
+    return "booleano";
+  }
+
+  if (kind === "null") {
+    return "nulo";
+  }
+
+  if (kind === "array") {
+    return "array";
+  }
+
+  return "objeto";
+}
+
+function formatPayloadValue(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value === null) {
+    return "null";
+  }
+
+  return String(value);
+}
+
+function summarizePayloadShape(payload) {
+  if (payload === null) {
+    return {
+      title: "No vazio",
+      badge: "null"
+    };
+  }
+
+  if (Array.isArray(payload)) {
+    return {
+      title: "Colecao em tempo real",
+      badge: `${payload.length} ${payload.length === 1 ? "item" : "itens"}`
+    };
+  }
+
+  if (typeof payload === "object") {
+    const keys = Object.keys(payload);
+    return {
+      title: "Objeto monitorado",
+      badge: `${keys.length} ${keys.length === 1 ? "chave" : "chaves"}`
+    };
+  }
+
+  return {
+    title: "Valor simples",
+    badge: valueKindLabel(payload)
+  };
 }
 
 function shortUid(uid) {
