@@ -1,21 +1,119 @@
 # Atividade Firebase
 
-Aplicacao web de demonstracao com `Firebase Auth` e `Firebase Realtime Database`, separando acesso entre os cargos `admin` e `user` por meio de `Firebase Security Rules`.
+Aplicacao web de demonstracao com `Firebase Auth` e `Firebase Realtime Database`, separando o acesso entre os cargos `admin` e `user` por meio de `Firebase Security Rules`.
 
-## O que este projeto entrega
+Este projeto foi pensado para a atividade de sala em que o objetivo e:
 
-- Estrutura do banco modelada como arvore JSON com os nos `/users` e `/admin-data`
-- Cadastro e login com Firebase Auth
-- Salvamento do cargo do usuario em `/users/{uid}/profile/role` no momento do cadastro
-- Interface visual mostrando leituras permitidas e bloqueadas para cada cargo
-- Regras do Realtime Database separando acesso por cargo
-- Documentacao minima para subir no GitHub e apresentar em sala
+- modelar o banco como arvore JSON
+- autenticar usuarios com Firebase
+- salvar o cargo do usuario no banco
+- restringir leitura e escrita com rules
+- mostrar visualmente o que cada cargo pode ou nao acessar
 
-## Estrutura do banco
+## Visao Geral
 
-O arquivo [database-structure.json](./database-structure.json) representa a arvore do Realtime Database.
+O projeto nao usa backend de negocio tradicional. Quase toda a logica acontece no navegador:
 
-Resumo da estrutura:
+- o usuario cria conta ou faz login com `Firebase Auth`
+- depois disso, a aplicacao grava e le dados direto no `Realtime Database`
+- as permissoes sao aplicadas pelo proprio Firebase, atraves das `Security Rules`
+
+O arquivo [server.js](./server.js) existe apenas para:
+
+- servir os arquivos estaticos
+- ler o `.env`
+- expor a configuracao do Firebase para o frontend em `/firebase-config.js`
+
+Ou seja: quem realmente controla o acesso aos dados nao e o `server.js`, e sim o conjunto `Firebase Auth + Realtime Database + Security Rules`.
+
+## O Que o Projeto Entrega
+
+- Estrutura do banco modelada com os nós `/users` e `/admin-data`
+- Cadastro e login com `Firebase Auth`
+- Salvamento do cargo do usuario em `/users/{uid}/profile/role`
+- Interface com comparacao visual entre permissoes de `user` e `admin`
+- Dois modos de leitura:
+  - `snapshot`: para comparar rapidamente leituras permitidas e bloqueadas
+  - `realtime`: para acompanhar um caminho do banco em tempo real
+- Rules separando o acesso por cargo
+- Documentacao detalhada de configuracao e funcionamento
+
+## Arquitetura do Projeto
+
+### Frontend
+
+- [index.html](./index.html): estrutura da interface
+- [styles.css](./styles.css): visual da pagina
+- [app.js](./app.js): autenticacao, leitura, escrita, modo snapshot e modo realtime
+
+### Suporte local
+
+- [server.js](./server.js): servidor estatico e injecao da configuracao do Firebase a partir do `.env`
+- [.env.example](./.env.example): exemplo das variaveis necessarias
+
+### Firebase
+
+- [database.rules.json](./database.rules.json): regras do Realtime Database
+- [database-structure.json](./database-structure.json): modelo da arvore JSON do banco
+
+## Como o Projeto Funciona
+
+### 1. Inicializacao
+
+Quando a pagina abre:
+
+1. O navegador carrega `index.html`
+2. O `server.js` disponibiliza `/firebase-config.js`
+3. O [app.js](./app.js) le `window.__FIREBASE_CONFIG__`
+4. O app inicializa:
+   - `initializeApp(firebaseConfig)`
+   - `getAuth(app)`
+   - `getDatabase(app)`
+
+Se algum campo do `.env` estiver faltando, a interface mostra um erro antes mesmo de tentar autenticar.
+
+### 2. Criacao de conta
+
+Ao clicar em `Criar conta`, o fluxo e:
+
+1. A conta e criada no `Firebase Auth` com `createUserWithEmailAndPassword`
+2. A aplicacao grava os dados do usuario em `/users/{uid}`
+3. O cargo escolhido no cadastro e salvo em:
+
+```json
+/users/{uid}/profile/role
+```
+
+4. Se o cargo for `admin`, o projeto tambem pode criar os dados iniciais de `adminAccess` e popular `/admin-data`
+
+### 3. Login
+
+Ao fazer login:
+
+1. O usuario e autenticado via `Firebase Auth`
+2. O app atualiza `lastLoginAt` em `/users/{uid}/private`
+3. O frontend tenta ler:
+   - `/users/{uid}`
+   - `/admin-data`
+   - `/users`
+4. O resultado dessas leituras e mostrado na interface
+
+### 4. Controle de acesso
+
+O frontend apenas tenta ler e escrever.
+
+Quem decide se a operacao pode ou nao acontecer e o Firebase:
+
+- se a rule permitir, a leitura/escrita funciona
+- se a rule negar, o app recebe `PERMISSION_DENIED`
+
+Isso e importante porque a seguranca nao depende do HTML ou do JavaScript da tela. Ela depende das rules publicadas no Realtime Database.
+
+## Estrutura do Banco
+
+O arquivo [database-structure.json](./database-structure.json) representa a arvore JSON usada no projeto.
+
+### Modelo completo
 
 ```json
 {
@@ -54,60 +152,338 @@ Resumo da estrutura:
       "title": "Painel exclusivo do administrador",
       "lastReviewAt": 1776706200000,
       "managedBy": "admin@exemplo.com"
+    },
+    "audit": {
+      "UID_DO_ADMIN": {
+        "email": "admin@exemplo.com",
+        "grantedAt": 1776706200000,
+        "note": "Registro gerado pela interface da atividade"
+      }
     }
   }
 }
 ```
 
-## Regras de acesso
+### Explicacao dos nos
 
-As rules estao em [database.rules.json](./database.rules.json).
+#### `/users/{uid}/profile`
 
-- `user` autenticado pode ler o proprio no em `/users/{uid}`
-- `user` nao pode ler `/users` inteiro
-- `user` nao pode ler `/admin-data`
-- `admin` pode ler `/users`
+Guarda os dados principais do usuario.
+
+- `uid`: identificador gerado pelo Firebase Auth
+- `email`: email da conta autenticada
+- `role`: cargo do usuario, `user` ou `admin`
+- `createdAt`: timestamp da criacao
+
+#### `/users/{uid}/private`
+
+Guarda dados privados ligados ao uso da conta.
+
+- `lastLoginAt`: ultimo login registrado
+- `welcomeMessage`: mensagem exibida para a conta
+
+#### `/users/{uid}/adminAccess`
+
+Existe apenas quando o usuario e `admin`.
+
+- `grantedAt`: quando o acesso admin foi criado
+- `note`: observacao sobre o perfil admin
+
+#### `/admin-data`
+
+No reservado ao cargo `admin`.
+
+- `dashboard`: informacoes gerais do painel administrativo
+- `audit`: trilha simples de admins e atualizacoes
+
+## Regras de Seguranca
+
+As regras ficam em [database.rules.json](./database.rules.json).
+
+### Regra geral
+
+No topo, o banco inteiro comeca bloqueado:
+
+```json
+".read": false,
+".write": false
+```
+
+Isso significa que nenhum caminho e liberado por padrao.
+
+### Regras de `/users`
+
+#### Leitura da raiz `/users`
+
+```json
+".read": "auth != null && root.child('users/' + auth.uid + '/profile/role').val() === 'admin'"
+```
+
+Efeito:
+
+- `admin` pode ler a raiz `/users`
+- `user` nao pode ler todos os usuarios
+
+#### Leitura de `/users/{uid}`
+
+```json
+".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')"
+```
+
+Efeito:
+
+- o proprio usuario pode ler seu no
+- o admin pode ler qualquer usuario
+
+### Regras de `profile`
+
+O no `profile` pode ser criado uma vez pelo proprio usuario:
+
+```json
+".write": "auth != null && auth.uid === $uid && !data.exists()"
+```
+
+Depois disso, os campos ficam protegidos por validacao:
+
+- `uid` deve ser igual ao `uid` autenticado
+- `email` deve bater com `auth.token.email`
+- `role` so pode ser `admin` ou `user`
+- `createdAt` deve ser numero ou `now`
+- campos extras sao bloqueados por:
+
+```json
+"$other": {
+  ".validate": false
+}
+```
+
+### Regras de `private`
+
+```json
+".read": "auth != null && (auth.uid === $uid || admin...)",
+".write": "auth != null && auth.uid === $uid"
+```
+
+Efeito:
+
+- o proprio usuario pode atualizar `private`
+- admin pode ler, mas nao escrever no `private` de outro usuario
+
+### Regras de `adminAccess`
+
+`adminAccess` so pode ser criado se o usuario ja tiver `role = admin`.
+
+### Regras de `/admin-data`
+
+```json
+".read": "auth != null && role === 'admin'",
+".write": "auth != null && role === 'admin'"
+```
+
+Efeito:
+
 - `admin` pode ler e escrever em `/admin-data`
-- O cargo em `/users/{uid}/profile/role` e gravado no cadastro e fica bloqueado para alteracao posterior
+- `user` recebe `PERMISSION_DENIED`
 
-## Como rodar
+## Modos da Interface
 
-1. Crie um projeto no Firebase.
-2. Ative `Authentication > Email/Password`.
-3. Ative `Realtime Database`.
-4. Copie [.env.example](./.env.example) para `.env` e preencha com as chaves do seu projeto.
-5. Publique as regras do arquivo [database.rules.json](./database.rules.json) no Realtime Database.
-6. Instale as dependencias:
+### Modo Snapshot
+
+Esse e o modo mais rapido para demonstrar a atividade.
+
+Ele tenta ler os caminhos principais uma vez:
+
+- `/users/{uid}`
+- `/admin-data`
+- `/users`
+
+Depois mostra:
+
+- o JSON retornado
+- os erros de permissao
+- um resumo textual do que foi liberado ou bloqueado
+
+### Modo Realtime
+
+Esse modo usa listener em tempo real com `onValue(...)`.
+
+Voce pode:
+
+- ouvir o proprio caminho `/users/{uid}`
+- ouvir `/users`
+- ouvir `/admin-data`
+- digitar um caminho manualmente
+
+O modo realtime mostra:
+
+- status atual do listener
+- caminho observado
+- numero de eventos recebidos
+- horario da ultima atualizacao
+- payload atual
+- historico dos eventos recentes
+
+## Configuracao do Firebase
+
+### 1. Criar o projeto
+
+No Firebase Console:
+
+1. Crie um novo projeto
+2. Adicione um app Web
+3. Copie o `firebaseConfig`
+
+### 2. Ativar Authentication
+
+No menu `Authentication`:
+
+1. Clique em `Get started`
+2. Entre em `Sign-in method`
+3. Ative `Email/Password`
+
+### 3. Ativar Realtime Database
+
+No menu `Realtime Database`:
+
+1. Clique em `Create Database`
+2. Escolha a regiao
+3. Crie o banco
+4. Depois substitua as rules pelas rules do arquivo [database.rules.json](./database.rules.json)
+
+### 4. Preencher o `.env`
+
+Copie [.env.example](./.env.example) para `.env` e preencha com os dados reais do projeto:
+
+```env
+FIREBASE_API_KEY=...
+FIREBASE_AUTH_DOMAIN=...
+FIREBASE_DATABASE_URL=...
+FIREBASE_PROJECT_ID=...
+FIREBASE_STORAGE_BUCKET=...
+FIREBASE_MESSAGING_SENDER_ID=...
+FIREBASE_APP_ID=...
+PORT=3000
+```
+
+Importante:
+
+- o `.env` real nao deve ser commitado
+- essas chaves do app web nao substituem as rules
+- quem protege os dados de verdade sao as `Security Rules`
+
+## Como Rodar Localmente
+
+1. Instale as dependencias:
 
 ```bash
 npm install
 ```
 
-7. Inicie a aplicacao:
+2. Confirme que o `.env` esta preenchido com os dados do seu projeto Firebase
+
+3. Inicie o servidor:
 
 ```bash
 npm start
 ```
 
-8. Abra `http://localhost:3000`.
+4. Abra:
 
-## Fluxo da demonstracao em sala
+```text
+http://localhost:3000
+```
 
-1. Crie uma conta `user`.
-2. Mostre na tela que ela consegue ler apenas `/users/{uid}`.
-3. Mostre o erro `PERMISSION_DENIED` ao tentar acessar `/admin-data` e `/users`.
-4. Saia da conta.
-5. Crie uma conta `admin`.
-6. Mostre que ela consegue ler `/users`, `/admin-data` e usar o botao `Popular /admin-data`.
+## Fluxo Recomendado de Teste
 
-## Arquivos principais
+### Teste com `user`
 
-- [index.html](./index.html): interface da atividade
-- [app.js](./app.js): integracao com Firebase Auth e Realtime Database
-- [server.js](./server.js): servidor estatico e injecao da configuracao do Firebase via `.env`
+1. Crie uma conta `user`
+2. Verifique no resumo que o cargo salvo e `user`
+3. Mostre que:
+   - `/users/{uid}` funciona
+   - `/admin-data` falha
+   - `/users` falha
+
+### Teste com `admin`
+
+1. Crie uma conta `admin`
+2. Verifique no resumo que o cargo salvo e `admin`
+3. Mostre que:
+   - `/users/{uid}` funciona
+   - `/admin-data` funciona
+   - `/users` funciona
+4. Clique em `Popular /admin-data`
+5. Abra o modo realtime e acompanhe as mudancas
+
+## Fluxo da Apresentacao em Sala
+
+Um roteiro simples para apresentar em menos de 2 minutos:
+
+1. Explique rapidamente que o projeto usa `Firebase Auth`, `Realtime Database` e `Security Rules`
+2. Mostre a estrutura do banco no README ou no `database-structure.json`
+3. Crie ou entre com uma conta `user`
+4. Mostre os blocos bloqueados
+5. Saia
+6. Crie ou entre com uma conta `admin`
+7. Mostre as leituras liberadas
+8. Abra o modo realtime
+9. Mostre uma atualizacao em `/admin-data`
+
+## Observacoes Importantes
+
+### Sobre o cargo `admin`
+
+Neste projeto, o cargo `admin` pode ser escolhido no cadastro porque isso facilita a demonstracao da atividade.
+
+Em um sistema real, o ideal seria:
+
+- criar admins por backend seguro
+- usar `Custom Claims`
+- ou promover usuarios via painel administrativo restrito
+
+### Sobre o `.env`
+
+O `.env` local contem a configuracao do seu app Firebase e nao deve ir para o Git.
+
+O projeto usa o `.env` apenas para configurar o frontend localmente. O controle de acesso continua sendo responsabilidade das rules publicadas no banco.
+
+### Sobre erros comuns
+
+#### `auth/api-key-not-valid`
+
+Normalmente significa:
+
+- chave copiada errada
+- servidor local ainda usando um `.env` antigo
+
+#### `auth/configuration-not-found`
+
+Normalmente significa:
+
+- `Authentication` ainda nao configurado
+- `Email/Password` nao habilitado
+
+#### `PERMISSION_DENIED`
+
+Normalmente significa:
+
+- a rule daquele caminho bloqueou a operacao
+- ou as rules do console ainda nao foram atualizadas para a versao do projeto
+
+## Arquivos Mais Importantes
+
+- [index.html](./index.html): estrutura da interface
+- [styles.css](./styles.css): visual da aplicacao
+- [app.js](./app.js): integracao com Firebase, regras na pratica, modo snapshot e modo realtime
+- [server.js](./server.js): servidor estatico e exposicao da configuracao do Firebase para o frontend
 - [database.rules.json](./database.rules.json): regras do Realtime Database
-- [database-structure.json](./database-structure.json): arvore JSON pedida na atividade
+- [database-structure.json](./database-structure.json): modelo da arvore JSON do banco
+- [.env.example](./.env.example): modelo das variaveis de ambiente
 
-## Observacao para a entrega
+## Entrega da Atividade
 
-O item de `print ou video curto` ainda precisa ser gravado manualmente por voce, porque isso depende do seu projeto Firebase configurado e dos dois logins sendo executados no navegador.
+Para fechar a entrega, ainda falta apenas:
+
+- subir o projeto no GitHub
+- gravar o print ou video curto com os dois cargos logados
+- apresentar em sala mostrando as diferencas entre `user` e `admin`
