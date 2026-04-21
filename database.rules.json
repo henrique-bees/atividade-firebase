@@ -3,29 +3,38 @@
     ".read": false,
     ".write": false,
     "users": {
+      ".read": "auth != null && root.child('users/' + auth.uid + '/profile/role').val() === 'admin'",
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')",
         "profile": {
-          "role": {
-            ".validate": "newData.val() === 'admin' || newData.val() === 'user'",
-            ".write": "auth != null && auth.uid === $uid && (!data.exists() || newData.val() === data.val())"
+          ".write": "auth != null && auth.uid === $uid && !data.exists()",
+          "uid": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists()",
+            ".validate": "newData.isString() && newData.val() === $uid"
           },
           "email": {
-            ".write": "auth != null && auth.uid === $uid && (!data.exists() || newData.val() === data.val())",
-            ".validate": "newData.isString() && newData.val().matches(/.+@.+\\..+/)"
+            ".write": "auth != null && auth.uid === $uid && !data.exists()",
+            ".validate": "newData.isString() && auth != null && newData.val() === auth.token.email"
+          },
+          "role": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists()",
+            ".validate": "newData.val() === 'admin' || newData.val() === 'user'"
           },
           "createdAt": {
             ".write": "auth != null && auth.uid === $uid && !data.exists()",
             ".validate": "newData.isNumber() || newData.val() == now"
           },
           "$other": {
-            ".write": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')",
-            ".validate": true
+            ".validate": false
           }
         },
         "private": {
           ".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')",
-          ".write": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')"
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "adminAccess": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')",
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('users/' + $uid + '/profile/role').val() === 'admin'"
         }
       }
     },

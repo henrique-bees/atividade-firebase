@@ -1,53 +1,45 @@
 {
-  "database": "FirebaseProject",
-  "collection": "users",
-  "documents": [
-    {
-      "uid": "UID_DO_USUARIO",
-      "email": "aluno@exemplo.com",
-      "passwordHash": "salt:hash",
+  "users": {
+    "UID_DO_USER": {
       "profile": {
+        "uid": "UID_DO_USER",
         "email": "aluno@exemplo.com",
         "role": "user",
-        "createdAt": "2026-04-20T17:30:00.000Z"
+        "createdAt": 1776706200000
       },
       "private": {
-        "lastLoginAt": "2026-04-20T17:30:00.000Z",
-        "welcomeMessage": "Conta user criada para demonstracao."
-      },
-      "adminAccess": null
+        "lastLoginAt": 1776706200000,
+        "welcomeMessage": "Conta user criada para a demonstracao."
+      }
     },
-    {
-      "uid": "UID_DO_ADMIN",
-      "email": "admin@exemplo.com",
-      "passwordHash": "salt:hash",
+    "UID_DO_ADMIN": {
       "profile": {
+        "uid": "UID_DO_ADMIN",
         "email": "admin@exemplo.com",
         "role": "admin",
-        "createdAt": "2026-04-20T17:30:00.000Z"
+        "createdAt": 1776706200000
       },
       "private": {
-        "lastLoginAt": "2026-04-20T17:30:00.000Z",
-        "welcomeMessage": "Conta admin criada para demonstracao."
+        "lastLoginAt": 1776706200000,
+        "welcomeMessage": "Conta admin criada para a demonstracao."
       },
       "adminAccess": {
-        "grantedAt": "2026-04-20T17:30:00.000Z",
-        "note": "Admin autorizado na criacao da conta"
+        "grantedAt": 1776706200000,
+        "note": "Admin autorizado para a demonstracao."
       }
     }
-  ],
-  "derivedAdminData": {
+  },
+  "admin-data": {
     "dashboard": {
       "title": "Painel exclusivo do administrador",
-      "lastReviewAt": "2026-04-20T17:30:00.000Z",
-      "totalUsers": 2,
-      "totalAdmins": 1
+      "lastReviewAt": 1776706200000,
+      "managedBy": "admin@exemplo.com"
     },
     "audit": {
       "UID_DO_ADMIN": {
         "email": "admin@exemplo.com",
-        "grantedAt": "2026-04-20T17:30:00.000Z",
-        "note": "Admin autorizado na criacao da conta"
+        "grantedAt": 1776706200000,
+        "note": "Registro gerado pela interface da atividade"
       }
     }
   }

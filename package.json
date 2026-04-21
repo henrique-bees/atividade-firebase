@@ -1,14 +1,13 @@
 {
   "name": "atividade-firebase",
   "version": "1.0.0",
-  "description": "Demo de controle de acesso com frontend local e MongoDB Atlas.",
+  "description": "Demo de controle de acesso com Firebase Auth e Realtime Database.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "mongodb": "^7.2.0"
+    "express": "^5.2.1"
   }
 }

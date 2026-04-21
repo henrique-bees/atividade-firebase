@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MongoDB Roles Demo</title>
+  <title>Firebase Roles Demo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -12,15 +12,15 @@
 <body>
   <main class="app-shell">
     <section class="hero">
-      <p class="eyebrow">Atividade MongoDB</p>
-      <h1>Controle de acesso por cargo com MongoDB Atlas</h1>
+      <p class="eyebrow">Atividade Firebase</p>
+      <h1>Controle de acesso com `admin` e `user`</h1>
       <p class="hero-copy">
-        Esta demo mostra dois cargos, <strong>admin</strong> e <strong>user</strong>,
-        acessando partes diferentes da collection <strong>users</strong> por meio de uma API Node.js.
+        Esta demonstracao usa <strong>Firebase Auth</strong> e <strong>Realtime Database</strong>
+        para mostrar o que cada cargo pode ou nao acessar em <strong>/users</strong> e <strong>/admin-data</strong>.
       </p>
       <div class="legend">
-        <span class="badge badge-allowed">Acesso liberado</span>
-        <span class="badge badge-denied">Acesso bloqueado</span>
+        <span class="badge allowed">Acesso liberado</span>
+        <span class="badge denied">Acesso bloqueado</span>
       </div>
     </section>
 
@@ -30,110 +30,217 @@
           <p class="panel-kicker">1. Autenticacao</p>
           <h2>Entrar ou criar conta</h2>
         </div>
-        <span id="session-state" class="pill neutral">Desconectado</span>
+        <span id="session-state" class="pill neutral">Inicializando</span>
       </div>
 
-      <form id="auth-form" class="auth-form">
-        <label>
-          <span>E-mail</span>
-          <input id="email" type="email" placeholder="voce@exemplo.com" required>
-        </label>
+      <div class="auth-grid">
+        <form class="auth-form">
+          <label>
+            <span>E-mail</span>
+            <input id="email" type="email" placeholder="voce@exemplo.com" required>
+          </label>
 
-        <label>
-          <span>Senha</span>
-          <input id="password" type="password" minlength="6" placeholder="Minimo 6 caracteres" required>
-        </label>
+          <label>
+            <span>Senha</span>
+            <input id="password" type="password" minlength="6" placeholder="Minimo 6 caracteres" required>
+          </label>
 
-        <label>
-          <span>Cargo no cadastro</span>
-          <select id="role">
-            <option value="user">user</option>
-            <option value="admin">admin</option>
-          </select>
-        </label>
+          <label>
+            <span>Cargo no cadastro</span>
+            <select id="role">
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+          </label>
 
-        <div class="actions">
-          <button id="signup-btn" type="button">Criar conta</button>
-          <button id="login-btn" type="button" class="secondary">Entrar</button>
-          <button id="logout-btn" type="button" class="ghost" disabled>Sair</button>
-        </div>
-      </form>
+          <div class="actions">
+            <button id="signup-btn" type="button">Criar conta</button>
+            <button id="login-btn" type="button" class="secondary">Entrar</button>
+            <button id="logout-btn" type="button" class="ghost" disabled>Sair</button>
+          </div>
 
-      <div class="helper-grid">
-        <article class="helper-card">
-          <h3>Conta `user`</h3>
-          <p>Pode acessar apenas seus proprios dados.</p>
-        </article>
-        <article class="helper-card">
-          <h3>Conta `admin`</h3>
-          <p>Pode acessar todos os usuarios e tambem o painel agregado.</p>
-        </article>
+          <div class="actions single-action">
+            <button id="seed-admin-data-btn" type="button" class="secondary" disabled>Popular /admin-data</button>
+          </div>
+        </form>
+
+        <aside class="quick-guide">
+          <article class="guide-card">
+            <h3>Conta `user`</h3>
+            <p>Consegue ler apenas o proprio no em `/users/{uid}`.</p>
+          </article>
+          <article class="guide-card">
+            <h3>Conta `admin`</h3>
+            <p>Consegue ler `/users`, acessar `/admin-data` e gravar no painel reservado.</p>
+          </article>
+          <article class="guide-card accent-card">
+            <h3>Dois modos de leitura</h3>
+            <p>Use `snapshot` para comparar rapidamente e `realtime` para acompanhar mudancas ao vivo.</p>
+          </article>
+        </aside>
       </div>
 
-      <pre id="status-box" class="status-box">Configure o arquivo `.env`, rode `npm start` e inicie a demonstracao.</pre>
+      <pre id="status-box" class="status-box">Configure o Firebase no arquivo `.env`, rode `npm start` e teste os dois cargos.</pre>
     </section>
 
     <section class="dashboard">
-      <article class="panel profile-panel">
+      <article class="panel summary-panel">
         <div class="panel-header">
           <div>
             <p class="panel-kicker">2. Sessao atual</p>
-            <h2>Perfil carregado da collection</h2>
+            <h2>Resumo do usuario logado</h2>
           </div>
         </div>
+
         <div id="profile-summary" class="profile-summary empty">
           Nenhum usuario autenticado.
+        </div>
+
+        <div class="stats-row">
+          <article class="stat-card neutral">
+            <span class="stat-label">Cargo</span>
+            <strong id="summary-role">Nenhum</strong>
+          </article>
+          <article class="stat-card neutral">
+            <span class="stat-label">Leituras liberadas</span>
+            <strong id="summary-access">0/3</strong>
+          </article>
+          <article class="stat-card neutral">
+            <span class="stat-label">Modo ativo</span>
+            <strong id="summary-view-mode">snapshot</strong>
+          </article>
         </div>
       </article>
 
       <article class="panel access-panel">
         <div class="panel-header">
           <div>
-            <p class="panel-kicker">3. Teste visual</p>
-            <h2>O que este cargo consegue ler?</h2>
+            <p class="panel-kicker">3. Regras na pratica</p>
+            <h2>O que esse cargo consegue acessar?</h2>
           </div>
         </div>
-        <div class="cards" id="access-cards">
+
+        <div id="access-cards" class="cards">
           <article class="access-card neutral">
-            <h3>Minha area em `users`</h3>
+            <span class="card-chip neutral">Aguardando</span>
+            <h3>Meu no em /users/{uid}</h3>
             <p>Faca login para testar.</p>
           </article>
           <article class="access-card neutral">
-            <h3>Painel derivado da collection</h3>
+            <span class="card-chip neutral">Aguardando</span>
+            <h3>No /admin-data</h3>
             <p>Faca login para testar.</p>
           </article>
           <article class="access-card neutral">
-            <h3>Lista completa de `users`</h3>
+            <span class="card-chip neutral">Aguardando</span>
+            <h3>Raiz /users</h3>
             <p>Faca login para testar.</p>
           </article>
         </div>
       </article>
 
       <article class="panel data-panel">
-        <div class="panel-header">
+        <div class="panel-header panel-header-wrap">
           <div>
-            <p class="panel-kicker">4. Dados retornados</p>
-            <h2>Resposta da API</h2>
+            <p class="panel-kicker">4. Dados do banco</p>
+            <h2>Leitura rapida ou monitor em tempo real</h2>
+          </div>
+
+          <div class="view-switch">
+            <button id="snapshot-mode-btn" class="mode-button is-active" type="button" aria-pressed="true">Modo snapshot</button>
+            <button id="live-mode-btn" class="mode-button" type="button" aria-pressed="false">Modo realtime</button>
           </div>
         </div>
-        <div class="json-grid">
-          <section>
-            <h3>`/api/users/me`</h3>
-            <pre id="user-json" class="json-box">Sem dados ainda.</pre>
-          </section>
-          <section>
-            <h3>`/api/admin-data`</h3>
-            <pre id="admin-json" class="json-box">Sem dados ainda.</pre>
-          </section>
-          <section>
-            <h3>`/api/users`</h3>
-            <pre id="users-json" class="json-box">Sem dados ainda.</pre>
-          </section>
-        </div>
+
+        <section id="snapshot-view" class="data-view is-active">
+          <div class="json-grid">
+            <section>
+              <h3>`/users/{uid}`</h3>
+              <pre id="user-json" class="json-box">Sem dados ainda.</pre>
+            </section>
+            <section>
+              <h3>`/admin-data`</h3>
+              <pre id="admin-json" class="json-box">Sem dados ainda.</pre>
+            </section>
+            <section>
+              <h3>`/users`</h3>
+              <pre id="users-json" class="json-box">Sem dados ainda.</pre>
+            </section>
+            <section>
+              <h3>Resumo das regras</h3>
+              <pre id="rules-json" class="json-box">As regras serao testadas apos o login.</pre>
+            </section>
+          </div>
+        </section>
+
+        <section id="live-view" class="data-view">
+          <div class="live-controls">
+            <div class="preset-row">
+              <button id="preset-self-btn" class="chip-button" type="button" disabled>Meu /users/{uid}</button>
+              <button id="preset-users-btn" class="chip-button" type="button" disabled>Raiz /users</button>
+              <button id="preset-admin-btn" class="chip-button" type="button" disabled>/admin-data</button>
+            </div>
+
+            <div class="custom-path-row">
+              <label class="path-field">
+                <span>Caminho customizado</span>
+                <input id="live-path-input" type="text" placeholder="users/SEU_UID ou admin-data" disabled>
+              </label>
+              <div class="actions live-actions">
+                <button id="apply-live-path-btn" type="button" class="secondary" disabled>Ouvir caminho</button>
+                <button id="clear-live-log-btn" type="button" class="ghost" disabled>Limpar log</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="live-grid">
+            <article class="live-panel live-panel-summary">
+              <p class="panel-kicker">Listener</p>
+              <h3 class="live-panel-title">Resumo do monitor</h3>
+              <div class="live-summary">
+                <div class="live-stat">
+                  <span class="stat-label">Status</span>
+                  <strong id="live-state-value" class="live-value">Pausado</strong>
+                </div>
+                <div class="live-stat">
+                  <span class="stat-label">Caminho</span>
+                  <strong id="live-path-value" class="live-value live-value-path">/</strong>
+                </div>
+                <div class="live-stat">
+                  <span class="stat-label">Eventos</span>
+                  <strong id="live-events-value" class="live-value">0</strong>
+                </div>
+                <div class="live-stat">
+                  <span class="stat-label">Ultima atualizacao</span>
+                  <strong id="live-updated-value" class="live-value">--:--:--</strong>
+                </div>
+              </div>
+              <p id="live-state-meta" class="live-meta">Entre com uma conta para iniciar o monitor.</p>
+            </article>
+
+            <article class="live-panel live-panel-payload">
+              <p class="panel-kicker">Payload ao vivo</p>
+              <h3 class="live-panel-title">Dados recebidos do listener</h3>
+              <pre id="live-json" class="json-box">Ative o modo realtime e escolha um caminho para iniciar o monitor.</pre>
+            </article>
+
+            <article class="live-panel live-panel-log">
+              <p class="panel-kicker">Historico</p>
+              <h3 class="live-panel-title">Eventos recentes</h3>
+              <div id="live-log" class="live-log">
+                <article class="log-entry neutral">
+                  <strong>Monitor parado</strong>
+                  <p>Ative o modo realtime para comecar a escutar um caminho.</p>
+                </article>
+              </div>
+            </article>
+          </div>
+        </section>
       </article>
     </section>
   </main>
 
-  <script src="./app.js"></script>
+  <script src="./firebase-config.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
