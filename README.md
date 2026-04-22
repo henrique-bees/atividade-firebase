@@ -415,20 +415,6 @@ http://localhost:3000
 4. Clique em `Popular /admin-data`
 5. Abra o modo realtime e acompanhe as mudancas
 
-## Fluxo da Apresentacao em Sala
-
-Um roteiro simples para apresentar em menos de 2 minutos:
-
-1. Explique rapidamente que o projeto usa `Firebase Auth`, `Realtime Database` e `Security Rules`
-2. Mostre a estrutura do banco no README ou no `database-structure.json`
-3. Crie ou entre com uma conta `user`
-4. Mostre os blocos bloqueados
-5. Saia
-6. Crie ou entre com uma conta `admin`
-7. Mostre as leituras liberadas
-8. Abra o modo realtime
-9. Mostre uma atualizacao em `/admin-data`
-
 ## Observacoes Importantes
 
 ### Sobre o cargo `admin`
@@ -479,11 +465,3 @@ Normalmente significa:
 - [database.rules.json](./database.rules.json): regras do Realtime Database
 - [database-structure.json](./database-structure.json): modelo da arvore JSON do banco
 - [.env.example](./.env.example): modelo das variaveis de ambiente
-
-## Entrega da Atividade
-
-Para fechar a entrega, ainda falta apenas:
-
-- subir o projeto no GitHub
-- gravar o print ou video curto com os dois cargos logados
-- apresentar em sala mostrando as diferencas entre `user` e `admin`
