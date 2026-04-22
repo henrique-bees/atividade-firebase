@@ -200,6 +200,59 @@ No reservado ao cargo `admin`.
 
 As regras ficam em [database.rules.json](./database.rules.json).
 
+### Regras completas
+
+Use o conteudo abaixo no `Realtime Database > Rules` do Firebase Console:
+
+```json
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      ".read": "auth != null && root.child('users/' + auth.uid + '/profile/role').val() === 'admin'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')",
+        "profile": {
+          ".write": "auth != null && auth.uid === $uid && !data.exists()",
+          "uid": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists()",
+            ".validate": "newData.isString() && newData.val() === $uid"
+          },
+          "email": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists()",
+            ".validate": "newData.isString() && auth != null && newData.val() === auth.token.email"
+          },
+          "role": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists()",
+            ".validate": "newData.val() === 'admin' || newData.val() === 'user'"
+          },
+          "createdAt": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists()",
+            ".validate": "newData.isNumber() || newData.val() == now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "private": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')",
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "adminAccess": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/profile/role').val() === 'admin')",
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('users/' + $uid + '/profile/role').val() === 'admin'"
+        }
+      }
+    },
+    "admin-data": {
+      ".read": "auth != null && root.child('users/' + auth.uid + '/profile/role').val() === 'admin'",
+      ".write": "auth != null && root.child('users/' + auth.uid + '/profile/role').val() === 'admin'"
+    }
+  }
+}
+```
+
 ### Regra geral
 
 No topo, o banco inteiro comeca bloqueado:
